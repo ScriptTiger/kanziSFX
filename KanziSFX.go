@@ -26,7 +26,7 @@ func help(err int) {
 func main() {
 
 	// Currently supported bit stream version (backwards compatible)
-	const BIT_STREAM_VERSION = 5
+	const BIT_STREAM_VERSION = 6
 
 	// Check for invalid number of arguments
 	if len(os.Args) > 4 {
