@@ -1,7 +1,21 @@
 [![Say Thanks!](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://docs.google.com/forms/d/e/1FAIpQLSfBEe5B_zo69OBk19l3hzvBmz3cOV6ol1ufjh0ER1q3-xd2Rg/viewform)
 
-# KanziSFX: Kanzi SelF-eXtracting archive
-KanziSFX is a minimal Kanzi decompressor to decompress an embedded Kanzi bit stream, with built-in support to also untar a compressed tar archive. So, the embedded Kanzi bit stream could contain either a single file of arbitrary type or a tar archive which will be both decompressed and unarchived.
+# kanziSFX: Kanzi SelF-eXtracting archive
+kanziSFX is a minimal Kanzi decompressor package to decompress an embedded Kanzi bit stream, with built-in support to also untar a compressed tar archive. So, the embedded Kanzi bit stream could contain either a single file of arbitrary type or a tar archive which will be both decompressed and unarchived.
+
+To import kanziSFX into your project:  
+`go get github.com/ScriptTiger/kanziSFX`  
+Then just `import "github.com/ScriptTiger/kanziSFX"` and get started with using its functions.
+
+Please refer to the dev package docs and reference implementation for more details and ideas on how to integrate kanziSFX into your project.  
+
+Dev package docs:  
+https://pkg.go.dev/github.com/ScriptTiger/kanziSFX
+
+Reference implementation:  
+https://github.com/ScriptTiger/kanziSFX/blob/main/ref/ref.go
+
+# Reference Implementation
 
 Usage: `kanzisfx [options...]`
 Argument                  | Description
@@ -14,20 +28,20 @@ Argument                  | Description
 
 Without any arguments, the embedded Kanzi stream will be decompressed into the working directory to a file of the same name as the executable, except with the `.exe` or `.app` extension removed. Or, if the Kanzi stream contains a tar archive, the tar archive will be both decompressed and unarchived into a folder within the working directory of the same name as the executable, except with the `.exe` or `.app` extension removed. So, command-line usage is only optional and the end user can just execute the application as they would any other application for this default behavior.
 
-# Appending a Kanzi archive to a KanziSFX executable
-Download the latest pre-built release for the intended target system:  
-https://github.com/ScriptTiger/KanziSFX/releases/latest
+# Appending a Kanzi archive to a kanziSFX executable
+Compile a kanziSFX executable from source or download the latest pre-built release for the intended target system:  
+https://github.com/ScriptTiger/kanziSFX/releases/latest
 
-For appending a Kanzi archive to a KanziSFX executable, issue one of the following commands.
+For appending a Kanzi archive to a kanziSFX executable, issue one of the following commands.
 
 For Windows:
 ```
-copy /b "KanziSFX.exe"+"file.knz" "MyKanziSFX.exe"
+copy /b "kanziSFX.exe"+"file.knz" "MyKanziSFX.exe"
 ```
 
 For Linux and Mac:
 ```
-cat "KanziSFX" "file.knz" > "MyKanziSFX"
+cat "kanziSFX" "file.knz" > "MyKanziSFX"
 ```
 
 # More About ScriptTiger
