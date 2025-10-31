@@ -13,7 +13,7 @@ Dev package docs:
 https://pkg.go.dev/github.com/ScriptTiger/kanziSFX
 
 Reference implementation:  
-https://github.com/ScriptTiger/kanziSFX/blob/main/ref/ref.go
+https://github.com/ScriptTiger/kanziSFX/blob/main/ref
 
 # Reference Implementation
 
