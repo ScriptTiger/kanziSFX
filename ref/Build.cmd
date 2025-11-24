@@ -1,4 +1,5 @@
 @echo off
+setlocal ENABLEDELAYEDEXPANSION
 
 set mod=kanziSFX
 if not exist "Release" md "Release"
@@ -7,7 +8,7 @@ cd ..
 
 if exist go.mod (
 	choice /m "Rebuild go.mod and go.sum?"
-	if %errorlevel% == 1 (del go.mod go.sum)
+	if !errorlevel! == 1 (del go.mod go.sum)
 )
 
 if not exist go.mod (
