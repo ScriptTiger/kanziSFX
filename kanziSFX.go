@@ -7,20 +7,39 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	kanzi "github.com/flanglet/kanzi-go/v2/io"
 )
 
-// Currently supported bit stream version (backwards compatible)
-const BIT_STREAM_VERSION = 6
+const (
+	// Currently supported bit stream version (backwards compatible)
+	BIT_STREAM_VERSION	= 6
 
-// Error constants
-const TAR_STDOUT_ERR = "Cannot output TAR to standard output"
+	// Flags
+
+	OUTPUT_KANZI		= 1
+	REWRITE_PATH		= 2
+	INFO			= 4
+	VERBOSE			= 8
+
+	// Errors
+
+	TAR_STDOUT_ERR = "Cannot output TAR to standard output"
+)
 
 // Public extract function
-func Extract(outNamePtr, infoStringPtr *string, knzenc, orw, info, verbose bool) (err error) {
+func Extract(outNamePtr *string, ctx map[string]any, ops uint8) (err error) {
+
+	// Set flags
+	var knzenc, orw, info, verbose bool
+	if ops&OUTPUT_KANZI != 0 {knzenc = true}
+	if ops&REWRITE_PATH != 0 {orw = true}
+	if ops&INFO != 0 {info = true}
+	if ops&VERBOSE != 0 {verbose = true}
 
 	// Locate executable
 	filePath, err := os.Executable()
@@ -92,11 +111,13 @@ func Extract(outNamePtr, infoStringPtr *string, knzenc, orw, info, verbose bool)
 	// Return if there is a tar and output is Stdout
 	if *outNamePtr == "-" && isTar && !knzenc  {return errors.New(TAR_STDOUT_ERR)}
 
-	// Build info string and return
+	// Grab CTX and return if only information requested
 	if info {
 		sfxFile.Close()
-		*infoStringPtr = "bit_stream_version="+strconv.Itoa(version)+"\n"+
-				 "tar="+strconv.FormatBool(isTar)+"\n"
+		ctxPrivate := reflect.ValueOf(knzReader).Elem().FieldByName("ctx")
+		ctxPublic := reflect.NewAt(ctxPrivate.Type(), unsafe.Pointer(ctxPrivate.UnsafeAddr())).Elem().Interface().(map[string]any)
+		for key, value := range ctxPublic {ctx[key] = value}
+		ctx["tar"] = isTar
 		return nil
 	}
 
