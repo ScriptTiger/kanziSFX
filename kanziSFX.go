@@ -32,7 +32,7 @@ const (
 )
 
 // Public extract function
-func Extract(outNamePtr *string, ctx map[string]any, ops uint8) (err error) {
+func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint8) (err error) {
 
 	// Set flags
 	var knzenc, orw, info, verbose bool
@@ -53,7 +53,7 @@ func Extract(outNamePtr *string, ctx map[string]any, ops uint8) (err error) {
 	defer sfxFile.Close()
 
 	// Determine length of KanziSFX / start of Kanzi stream
-	sfxSize := int64(1500000)
+	sfxSize := accelerator
 	sfxFile.Seek(sfxSize, io.SeekStart)
 	sfxReader := bufio.NewReader(sfxFile)
 	knzMagic := make([]byte, 5)
