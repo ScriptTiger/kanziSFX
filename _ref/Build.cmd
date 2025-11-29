@@ -33,16 +33,19 @@ exit /b
 
 set GOOS=windows
 set EXT=.exe
+set INCLUDE=include_other.go
 call :Build_App
 
 if %dev% == 1 exit /b
 
 set GOOS=linux
 set EXT=
+set INCLUDE=include_other.go
 call :Build_App
 
 set GOOS=darwin
 set EXT=.app
+set INCLUDE=include_mac.go
 call :Build_App
 
 exit /b
@@ -56,7 +59,6 @@ call :Build
 
 if %dev% == 1 exit /b
 if not %GOOS% == windows exit /b
-exit /b
 
 cd ..\GUI
 
@@ -74,6 +76,7 @@ if not exist go.mod (
 set app=GUI
 set source=GUI_Windows
 set flags=-s -w -H=windowsgui
+set INCLUDE=
 call :Build
 
 cd ..\CLI
@@ -82,5 +85,6 @@ exit /b
 
 :Build
 echo Building %mod%_%app%_%GOOS%_%GOARCH%%EXT%...
-go build -ldflags="%flags%" -o "../Release/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" %source%.go
+go build -ldflags="%flags%" -o "../Release/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" %source%.go %INCLUDE%
+if not %GOOS% == darwin call upx --lzma "../Release/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" 1> nul
 exit /b
