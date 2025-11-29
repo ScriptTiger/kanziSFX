@@ -74,7 +74,7 @@ func main() {
 	if info {ops|=INFO}
 
 	// Call kanziSFX 
-	err := Extract(outNamePtr, 1500000, ctx, ops|VERBOSE)
+	err := Extract(outNamePtr, accelerator, ctx, ops|VERBOSE)
 
 	// Output CTX data if given
 	if tar, hasKey := ctx["tar"]; hasKey {

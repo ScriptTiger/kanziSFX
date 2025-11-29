@@ -28,7 +28,7 @@ const (
 
 	// Errors
 
-	TAR_STDOUT_ERR = "Cannot output TAR to standard output"
+	TAR_STDOUT_ERR = "Cannot output TAR to standard output!"
 )
 
 // Public extract function
@@ -63,7 +63,7 @@ func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint
 
 		if err != nil {
 			sfxFile.Close()
-			return errors.New("No Kanzi stream found")
+			return errors.New("No Kanzi stream found!")
 		}
 
 		if string(knzMagic) == "\x00KANZ" {break}
