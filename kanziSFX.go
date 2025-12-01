@@ -31,8 +31,17 @@ const (
 	TAR_STDOUT_ERR = "Cannot output TAR to standard output!"
 )
 
+// New type to wrap an io.Reader and override the io.Reader.Read function to also track progress to provided [2]int64
+type progressTracker struct {reader io.Reader}
+var progressPtr *[2]int64
+func (this *progressTracker) Read(p []byte) (n int, err error) {
+	n, err = this.reader.Read(p)
+	progressPtr[0] += int64(n)
+	return n, err
+}
+
 // Public extract function
-func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint8) (err error) {
+func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, progress *[2]int64, ops uint8) (err error) {
 
 	// Set flags
 	var knzenc, orw, info, verbose bool
@@ -52,7 +61,7 @@ func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint
 	if err != nil {return err}
 	defer sfxFile.Close()
 
-	// Determine length of KanziSFX / start of Kanzi stream
+	// Determine length of KanziSFX / start of Kanzi bit stream
 	sfxSize := accelerator
 	sfxFile.Seek(sfxSize, io.SeekStart)
 	sfxReader := bufio.NewReader(sfxFile)
@@ -63,7 +72,7 @@ func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint
 
 		if err != nil {
 			sfxFile.Close()
-			return errors.New("No Kanzi stream found!")
+			return errors.New("No Kanzi bit stream found!")
 		}
 
 		if string(knzMagic) == "\x00KANZ" {break}
@@ -71,7 +80,7 @@ func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint
 		sfxSize++
 	}
 
-	// Roll back sfxSize to beginning of Kanzi stream / end of sfx
+	// Roll back sfxSize to beginning of Kanzi bit stream / end of sfx
 	sfxSize = sfxSize-3
 
 	// Determine bit stream version
@@ -88,7 +97,7 @@ func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint
 		)
 	}
 
-	// Create a Kanzi reader for the Kanzi stream
+	// Create a Kanzi reader for the Kanzi bit stream
 	sfxFile.Seek(sfxSize, io.SeekStart)
 	knzReader, err := kanzi.NewReader(sfxFile, 4)
 	if err != nil {return err}
@@ -111,13 +120,26 @@ func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint
 	// Return if there is a tar and output is Stdout
 	if *outNamePtr == "-" && isTar && !knzenc  {return errors.New(TAR_STDOUT_ERR)}
 
-	// Grab CTX and return if only information requested
-	if info {
-		sfxFile.Close()
-		ctxPrivate := reflect.ValueOf(knzReader).Elem().FieldByName("ctx")
-		ctxPublic := reflect.NewAt(ctxPrivate.Type(), unsafe.Pointer(ctxPrivate.UnsafeAddr())).Elem().Interface().(map[string]any)
+	// Determine size of Kanzi bit stream
+	fileInfo, err := sfxFile.Stat()
+	if err != nil {return err}
+	inputSize := fileInfo.Size()-sfxSize
+
+	// Locate CTX
+	ctxPrivate := reflect.ValueOf(knzReader).Elem().FieldByName("ctx")
+	ctxPublic := reflect.NewAt(ctxPrivate.Type(), unsafe.Pointer(ctxPrivate.UnsafeAddr())).Elem().Interface().(map[string]any)
+
+	// If CTX map provided in arguments, populate it
+	if ctx != nil {
 		for key, value := range ctxPublic {ctx[key] = value}
 		ctx["tar"] = isTar
+		ctx["inputSize"] = inputSize
+	}
+
+	// Return if only information requested
+	if info {
+		sfxFile.Close()
+		if ctx == nil {return errors.New("INFO flag set but no map pointer provided!")}
 		return nil
 	}
 
@@ -137,21 +159,42 @@ func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint
 		defer output.Close()
 	}
 
-	// If knz flag set, dump Kanzi stream and return
+	// Set file offset at start of Kanzi bit stream
+	sfxFile.Seek(sfxSize, io.SeekStart)
+
+	// Create generic io.Reader for further io.Copy functions
+	var reader io.Reader
+
+	// If knz flag set, dump Kanzi bit stream and return
+	// If progress array provided, wrap the sfxFile in the progressTracker type to report progress
 	if knzenc {
-		sfxFile.Seek(sfxSize, io.SeekStart)
-		io.Copy(output, sfxFile)
+		if progress == nil {reader = sfxFile
+		} else {
+			progressPtr = progress
+			progressPtr[1] = inputSize
+			reader = &progressTracker{reader: sfxFile}
+		}
+		io.Copy(output, reader)
 		sfxFile.Close()
 		output.Close()
 		return nil
 	}
 
-	// Decompress Kanzi stream, and unarchive tar if applicable
-	sfxFile.Seek(sfxSize, io.SeekStart)
+	// Create Kanzi reader
 	knzReader, err = kanzi.NewReader(sfxFile, 4)
 	if err != nil {return err}
+
+	// If progress array provided, wrap the Kanzi reader in the progressTracker type to report progress
+	if progress == nil {reader = knzReader
+	} else {
+		progressPtr = progress
+		if value, hasKey := ctxPublic["outputSize"]; hasKey {progressPtr[1] = value.(int64)}
+		reader = &progressTracker{reader: knzReader}
+	}
+
+	// Decompress Kanzi bit stream, and unarchive tar if applicable
 	if isTar {
-		tarReader := tar.NewReader(knzReader)
+		tarReader := tar.NewReader(reader)
 		os.MkdirAll(*outNamePtr, 0755)
 		for {
 			tarHeader, err := tarReader.Next()
@@ -166,6 +209,6 @@ func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, ops uint
 				outputTar.Close()
 			}
 		}
-	} else {io.Copy(output, knzReader)}
+	} else {io.Copy(output, reader)}
 	return nil
 }

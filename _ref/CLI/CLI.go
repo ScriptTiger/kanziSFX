@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	. "github.com/ScriptTiger/kanziSFX"
 )
@@ -17,6 +18,24 @@ func help(err int) {
 		" -info                Show Kanzi bit stream info\n",
 	)
 	os.Exit(err)
+}
+
+// Function to display error and exit
+func displayError(err error) {
+	if err.Error() == TAR_STDOUT_ERR {help(8)}
+	os.Stdout.WriteString("\r"+err.Error()+"\n")
+	os.Exit(-1)
+}
+
+// Function to display progress
+func printProgress(progress *[2]int64) {
+	if progress[1] != 0 {
+		os.Stdout.WriteString(
+			"\r"+
+			strconv.Itoa(int((float64(progress[0])/float64(progress[1]))*100))+
+			"% | "+strconv.FormatInt(progress[0], 10)+" bytes of "+strconv.FormatInt(progress[1], 10),
+		)
+	} else {os.Stdout.WriteString("\r--% | "+strconv.FormatInt(progress[0], 10)+" bytes of --")}
 }
 
 func main() {
@@ -64,8 +83,12 @@ func main() {
 
 	if *outNamePtr != "-" && !info {os.Stdout.WriteString("Checking Kanzi bit stream...\n")}
 
-	// Initialize map for info
-	ctx := make(map[string]any)
+	// If info requested, initialize map to receive CTX
+	// If not, initialize progress tracker to track progress of extraction if not extracting to standard output
+	var ctx map[string]any
+	var progress *[2]int64
+	if info {ctx = make(map[string]any)
+	} else if *outNamePtr != "-" {progress = new([2]int64)}
 
 	// Set flags to pass to kanziSFX
 	var ops uint8
@@ -73,37 +96,59 @@ func main() {
 	if orw {ops|=REWRITE_PATH}
 	if info {ops|=INFO}
 
-	// Call kanziSFX 
-	err := Extract(outNamePtr, accelerator, ctx, ops|VERBOSE)
-
-	// Output CTX data if given
-	if tar, hasKey := ctx["tar"]; hasKey {
-		var sb strings.Builder
-		sb.WriteString("tar="+strconv.FormatBool(tar.(bool))+"\n")
-		if value, hasKey := ctx["bsVersion"]; hasKey {
-			sb.WriteString("bit_stream_version="+strconv.Itoa(int(value.(uint)))+"\n")
-		}
-		if value, hasKey := ctx["blockSize"]; hasKey {
-			sb.WriteString("block_size="+strconv.Itoa(int(value.(uint)))+"\n")
-		}
-		if value, hasKey := ctx["entropy"]; hasKey {
-			sb.WriteString("entropy="+value.(string)+"\n")
-		}
-		if value, hasKey := ctx["transform"]; hasKey {
-			sb.WriteString("transform="+value.(string)+"\n")
-		}
-		if value, hasKey := ctx["outputSize"]; hasKey {
-			sb.WriteString("output_size="+strconv.FormatInt(value.(int64), 10)+"\n")
-		}
-		if value, hasKey := ctx["jobs"]; hasKey {
-			sb.WriteString("jobs="+strconv.Itoa(int(value.(uint)))+"\n")
-		}
-		os.Stdout.WriteString(sb.String())
+	// Call kanziSFX, within a go routine if progress tracking is needed and without if not
+	var running bool
+	var err error
+	if *outNamePtr == "-" || info {
+		err = Extract(outNamePtr, accelerator, ctx, nil, ops)
+		if err != nil {displayError(err)}
+	} else {
+		go func() {
+			running = true
+			err = Extract(outNamePtr, accelerator, nil, progress, ops)
+			if err != nil {displayError(err)}
+			running = false
+		}()
 	}
 
-	// Output if there's an error
-	if err != nil {
-		if err.Error() == TAR_STDOUT_ERR {help(8)}
-		os.Stdout.WriteString(err.Error()+"\n")
+	// If extracting to a file and not standard output, display progress
+	// If info requested and CTX map given, output CTX data
+	if *outNamePtr != "-" && !info {
+		os.Stdout.WriteString("--% | -- bytes of --")
+		for ; running; {
+			if progress[0] != 0 {printProgress(progress)}
+			time.Sleep(100*time.Millisecond)
+		}
+		if progress[0] != 0 {
+			printProgress(progress)
+			os.Stdout.WriteString("\nExtraction complete!\n")
+		}
+	} else if info {
+		if tar, hasKey := ctx["tar"]; hasKey {
+			var sb strings.Builder
+			sb.WriteString("tar="+strconv.FormatBool(tar.(bool))+"\n")
+			if value, hasKey := ctx["bsVersion"]; hasKey {
+				sb.WriteString("bit_stream_version="+strconv.Itoa(int(value.(uint)))+"\n")
+			}
+			if value, hasKey := ctx["blockSize"]; hasKey {
+				sb.WriteString("block_size="+strconv.Itoa(int(value.(uint)))+"\n")
+			}
+			if value, hasKey := ctx["entropy"]; hasKey {
+				sb.WriteString("entropy="+value.(string)+"\n")
+			}
+			if value, hasKey := ctx["transform"]; hasKey {
+				sb.WriteString("transform="+value.(string)+"\n")
+			}
+			if value, hasKey := ctx["inputSize"]; hasKey {
+				sb.WriteString("input_size="+strconv.FormatInt(value.(int64), 10)+"\n")
+			}
+			if value, hasKey := ctx["outputSize"]; hasKey {
+				sb.WriteString("output_size="+strconv.FormatInt(value.(int64), 10)+"\n")
+			}
+			if value, hasKey := ctx["jobs"]; hasKey {
+				sb.WriteString("jobs="+strconv.Itoa(int(value.(uint)))+"\n")
+			}
+			os.Stdout.WriteString(sb.String())
+		}
 	}
 }

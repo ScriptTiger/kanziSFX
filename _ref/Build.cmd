@@ -86,5 +86,5 @@ exit /b
 :Build
 echo Building %mod%_%app%_%GOOS%_%GOARCH%%EXT%...
 go build -ldflags="%flags%" -o "../Release/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" %source%.go %INCLUDE%
-if not %GOOS% == darwin call upx --lzma "../Release/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" 1> nul
+if %errorlevel% == 0 if not %GOOS% == darwin call upx --lzma "../Release/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" 1> nul
 exit /b
