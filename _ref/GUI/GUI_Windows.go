@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	. "github.com/ScriptTiger/kanziSFX"
@@ -27,6 +28,7 @@ const (
 	BROWSE_BUTTON = 2
 	EXTRACT_BUTTON = 3
 	CANCEL_BUTTON = 4
+	PROGRESS_BAR = 5
 
 	// Control layout
 
@@ -39,6 +41,7 @@ const (
 	// Custom window messages
 
 	WM_EXTRACTION_COMPLETE = 0x7fff
+	WM_EXTRACTION_FAILED = 0x7ffe
 )
 
 var (
@@ -47,6 +50,15 @@ var (
 
 	// Tar boolean denoting if Kanzi bit stream contains tar or not
 	tar bool
+
+	// Progress tracker provided to kanziSFX
+	progress [2]int64
+
+	// Track if extraction is running or not
+	running bool
+
+	// Errors
+	err error
 )
 
 // Window callback function
@@ -63,8 +75,17 @@ func proc(hwnd syscall.Handle, msg uint32, wparam, lparam uintptr) (uintptr) {
 				uintptr(TEXT),
 				0, 0,
 			)
-			defaultPath, _ := os.Executable()
-			defaultPath, _ = filepath.EvalSymlinks(defaultPath)
+			defaultPath, err := os.Executable()
+			if err != nil {
+				MessageBox(uintptr(hwnd), CStr(err.Error()), CStr("Error"), MB_ICONERROR)
+				DestroyWindow(uintptr(hwnd))
+			} else {
+				defaultPath, err = filepath.EvalSymlinks(defaultPath)
+				if err != nil {
+					MessageBox(uintptr(hwnd), CStr(err.Error()), CStr("Error"), MB_ICONERROR)
+					DestroyWindow(uintptr(hwnd))
+				}
+			}
 			defaultPath = strings.TrimSuffix(defaultPath, filepath.Ext(defaultPath))
 			CreateWindowEx(
 				WS_EX_CLIENTEDGE,
@@ -152,19 +173,86 @@ func proc(hwnd syscall.Handle, msg uint32, wparam, lparam uintptr) (uintptr) {
 					DestroyWindow(GetDlgItem(uintptr(hwnd), EDIT_FIELD))
 					DestroyWindow(GetDlgItem(uintptr(hwnd), BROWSE_BUTTON))
 					DestroyWindow(GetDlgItem(uintptr(hwnd), EXTRACT_BUTTON))
-					pathBufferStr := syscall.UTF16ToString(pathBuffer)
-					go func() {
-						err := Extract(&pathBufferStr, accelerator, nil, REWRITE_PATH)
-						if err != nil {MessageBox(0, CStr(err.Error()), CStr("Error"), MB_ICONERROR)}
-						PostMessage(
+					var pbhwnd uintptr
+					if progress[1] != 0 {
+						pbhwnd = CreateWindowEx(
+							0,
+							CStr(PROGRESS_CLASS),
+							0,
+							WS_CHILD | WS_VISIBLE,
+							PAD, LINE_HEIGHT+PAD, WINDOW_WIDTH-25, LINE_HEIGHT,
 							uintptr(hwnd),
-							WM_EXTRACTION_COMPLETE,
+							uintptr(PROGRESS_BAR),
 							0, 0,
 						)
+						SendMessage(
+							pbhwnd,
+							PBM_SETRANGE,
+							0,
+							uintptr(100<<16),
+						)
+					}
+					pathBufferStr := syscall.UTF16ToString(pathBuffer)
+					go func() {
+						running = true
+						err = Extract(&pathBufferStr, accelerator, nil, &progress, REWRITE_PATH)
+						running = false
+						if err != nil {
+							PostMessage(
+								uintptr(hwnd),
+								WM_EXTRACTION_FAILED,
+								0, 0,
+							)
+						} else {
+							PostMessage(
+								uintptr(hwnd),
+								WM_EXTRACTION_COMPLETE,
+								0, 0,
+							)
+						}
 					}()
+					if progress[1] != 0 {
+						go func() {
+							for ; running; {
+								SendMessage(
+									uintptr(pbhwnd),
+									PBM_SETPOS,
+									uintptr(int((float64(progress[0])/float64(progress[1]))*100)),
+									0,
+								)
+								time.Sleep(100*time.Millisecond)
+							}
+							if err != nil {
+								SendMessage(
+									uintptr(pbhwnd),
+									PBM_SETPOS,
+									0,
+									0,
+								)
+							} else {
+								SendMessage(
+									uintptr(pbhwnd),
+									PBM_SETPOS,
+									100,
+									0,
+								)
+							}
+						}()
+					}
 				case CANCEL_BUTTON:
 					DestroyWindow(uintptr(hwnd))
 			}
+			return 0
+		case WM_EXTRACTION_FAILED:
+			SetWindowText(
+				GetDlgItem(uintptr(hwnd), TEXT),
+				CStr("A problem occurred during extraction!"),
+			)
+			SetWindowText(
+				GetDlgItem(uintptr(hwnd), CANCEL_BUTTON),
+				CStr("Okay"),
+			)
+			MessageBox(uintptr(hwnd), CStr(err.Error()), CStr("Error"), MB_ICONERROR)
 			return 0
 		case WM_EXTRACTION_COMPLETE:
 			SetWindowText(
@@ -197,9 +285,9 @@ func main() {
 	ctx := make(map[string]any)
 
 	// Call kanziSFX
-	err := Extract(outNamePtr, accelerator, ctx, INFO)
+	err = Extract(outNamePtr, accelerator, ctx, nil, INFO)
 
-	// Report any errors and exit
+	// If there was an error, report it and exit
 	if err != nil {
 		MessageBox(0, CStr(err.Error()), CStr("Error"), MB_ICONERROR)
 		os.Exit(1)
@@ -207,6 +295,9 @@ func main() {
 
 	// Check if Kanzi bit stream contains tar or not
 	if ctx["tar"].(bool) {tar = true}
+
+	// Check if output size is present to use with progress tracking
+	if value, hasKey := ctx["outputSize"]; hasKey {progress[1] = value.(int64)}
 
 	// Get screen dimensions
 
