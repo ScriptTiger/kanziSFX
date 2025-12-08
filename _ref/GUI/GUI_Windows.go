@@ -14,7 +14,7 @@ import (
 
 const (
 	// kanziSFX accelerator
-	accelerator int64 = 500000
+	ACCELERATOR int64 = 500000
 
 	// Window dimensions
 
@@ -45,6 +45,9 @@ const (
 )
 
 var (
+	// Default path
+	defaultPath string
+
 	// Path buffer
 	pathBuffer = make([]uint16, MAX_PATH)
 
@@ -54,12 +57,15 @@ var (
 	// Progress tracker provided to kanziSFX
 	progress [2]int64
 
-	// Track if extraction is running or not
-	running bool
-
 	// Errors
 	err error
 )
+
+// Function to report error and exit
+func errExit(err error, code int) {
+	MessageBox(0, CStr(err.Error()), CStr("Error"), MB_ICONERROR)
+	os.Exit(code)
+}
 
 // Window callback function
 func proc(hwnd syscall.Handle, msg uint32, wparam, lparam uintptr) (uintptr) {
@@ -75,18 +81,6 @@ func proc(hwnd syscall.Handle, msg uint32, wparam, lparam uintptr) (uintptr) {
 				uintptr(TEXT),
 				0, 0,
 			)
-			defaultPath, err := os.Executable()
-			if err != nil {
-				MessageBox(uintptr(hwnd), CStr(err.Error()), CStr("Error"), MB_ICONERROR)
-				DestroyWindow(uintptr(hwnd))
-			} else {
-				defaultPath, err = filepath.EvalSymlinks(defaultPath)
-				if err != nil {
-					MessageBox(uintptr(hwnd), CStr(err.Error()), CStr("Error"), MB_ICONERROR)
-					DestroyWindow(uintptr(hwnd))
-				}
-			}
-			defaultPath = strings.TrimSuffix(defaultPath, filepath.Ext(defaultPath))
 			CreateWindowEx(
 				WS_EX_CLIENTEDGE,
 				CStr("edit"),
@@ -193,9 +187,9 @@ func proc(hwnd syscall.Handle, msg uint32, wparam, lparam uintptr) (uintptr) {
 						)
 					}
 					pathBufferStr := syscall.UTF16ToString(pathBuffer)
+					running := true
 					go func() {
-						running = true
-						err = Extract(&pathBufferStr, accelerator, nil, &progress, REWRITE_PATH)
+						err = Extract(&pathBufferStr, ACCELERATOR, nil, &progress, REWRITE_PATH)
 						running = false
 						if err != nil {
 							PostMessage(
@@ -285,19 +279,25 @@ func main() {
 	ctx := make(map[string]any)
 
 	// Call kanziSFX
-	err = Extract(outNamePtr, accelerator, ctx, nil, INFO)
+	err = Extract(outNamePtr, ACCELERATOR, ctx, nil, INFO)
 
 	// If there was an error, report it and exit
-	if err != nil {
-		MessageBox(0, CStr(err.Error()), CStr("Error"), MB_ICONERROR)
-		os.Exit(1)
-	}
+	if err != nil {errExit(err, 1)}
 
 	// Check if Kanzi bit stream contains tar or not
 	if ctx["tar"].(bool) {tar = true}
 
 	// Check if output size is present to use with progress tracking
 	if value, hasKey := ctx["outputSize"]; hasKey {progress[1] = value.(int64)}
+
+	// Generate default path
+	defaultPath, err = os.Executable()
+	if err != nil {errExit(err, 2)
+	} else {
+		defaultPath, err = filepath.EvalSymlinks(defaultPath)
+		if err != nil {errExit(err, 3)}
+	}
+	defaultPath = strings.TrimSuffix(filepath.Base(defaultPath), filepath.Ext(defaultPath))
 
 	// Get screen dimensions
 
