@@ -26,13 +26,17 @@ Argument                  | Description
 
 `-` can be used in place of `<file>` to designate standard output as the destination, but cannot be used in place of a directory for extracting tar archives.
 
-Without any arguments, the embedded Kanzi stream will be decompressed into the working directory to a file of the same name as the executable, except with the `.exe` or `.app` extension removed. Or, if the Kanzi stream contains a tar archive, the tar archive will be both decompressed and unarchived into a folder within the working directory of the same name as the executable, except with the `.exe` or `.app` extension removed. So, command-line usage is only optional and the end user can just execute the application as they would any other application for this default behavior.
+Without any arguments, the embedded Kanzi stream will be decompressed into the working directory to a file of the same name as the executable, except with the extension removed. Or, if the Kanzi stream contains a tar archive, the tar archive will be both decompressed and unarchived into a folder within the working directory of the same name as the executable, except with the extension removed. So, command-line usage is only optional and the end user can just execute the application as they would any other application for this default behavior.
+
+**NOTE FOR LINUX USERS: Executables on Linux generally don't have an extension. However, it is recommended to use an extension anyway just for ease-of-use for whoever you are sending the kanziSFX to, so generally either `.elf` or `.bin`.**
 
 # GUI Reference Implementation
 
-[![ScriptTiger/kanziSFX](https://scripttiger.github.io/images/kanziSFX-Interface.png)](https://github.com/ScriptTiger/kanziSFX)
+[![ScriptTiger/kanziSFX](https://scripttiger.github.io/images/kanziSFX-Interface-Windows.png)](https://github.com/ScriptTiger/kanziSFX)
 
-The cno GUI package was used for its extremely minimal and lightweight nature to allow kanziSFX to retain a small footprint, as is necessary for a self-extracting archive decompressor. However, cno only supports native Windows GUIs at the moment, so this reference implementation is only available for Windows.
+[![ScriptTiger/kanziSFX](https://scripttiger.github.io/images/kanziSFX-Interface-Linux.png)](https://github.com/ScriptTiger/kanziSFX)
+
+The cno GUI package was used for its extremely minimal and lightweight nature to allow kanziSFX to retain a small footprint, as is necessary for a self-extracting archive decompressor. However, cno only supports native GUIs for Windows and Linux at the moment, so there are only GUI reference implementations available for those platforms.
 
 For additional notes on cno, please refer to its documentation:  
 https://github.com/ScriptTiger/cno
@@ -50,7 +54,7 @@ copy /b "kanziSFX.exe"+"file.knz" "MyKanziSFX.exe"
 
 For Linux and Mac:
 ```
-cat "kanziSFX" "file.knz" > "MyKanziSFX"
+cat "kanziSFX.bin" "file.knz" > "MyKanziSFX.bin"
 ```
 
 # More About ScriptTiger

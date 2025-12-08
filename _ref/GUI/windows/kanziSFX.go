@@ -1,8 +1,8 @@
 package main
 
 import (
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -17,12 +17,10 @@ const (
 	ACCELERATOR int64 = 500000
 
 	// Window dimensions
-
 	WINDOW_WIDTH = 400
 	WINDOW_HEIGHT = 115
 
 	// Control IDs
-
 	TEXT = 0
 	EDIT_FIELD = 1
 	BROWSE_BUTTON = 2
@@ -31,7 +29,6 @@ const (
 	PROGRESS_BAR = 5
 
 	// Control layout
-
 	PAD = 5
 	LINE_HEIGHT = 20
 	BROWSE_WIDTH = 20
@@ -39,7 +36,6 @@ const (
 	BUTTON_WIDTH =  55
 
 	// Custom window messages
-
 	WM_EXTRACTION_COMPLETE = 0x7fff
 	WM_EXTRACTION_FAILED = 0x7ffe
 )
@@ -56,6 +52,9 @@ var (
 
 	// Progress tracker provided to kanziSFX
 	progress [2]int64
+
+	// Instructions
+	instructions string
 
 	// Errors
 	err error
@@ -74,7 +73,7 @@ func proc(hwnd syscall.Handle, msg uint32, wparam, lparam uintptr) (uintptr) {
 			CreateWindowEx(
 				0,
 				CStr("static"),
-				CStr("Extract to:"),
+				CStr(instructions+":"),
 				WS_CHILD | WS_VISIBLE,
 				PAD, PAD, WINDOW_WIDTH, LINE_HEIGHT,
 				uintptr(hwnd),
@@ -133,7 +132,7 @@ func proc(hwnd syscall.Handle, msg uint32, wparam, lparam uintptr) (uintptr) {
 					if tar {
 						pathGet = SHBrowseForFolder(uintptr(unsafe.Pointer(&BROWSEINFOW{
 							HwndOwner:	hwnd,
-							LpszTitle:	(*uint16)(unsafe.Pointer(CStr("Select the directory to extract to."))),
+							LpszTitle:	(*uint16)(unsafe.Pointer(CStr(instructions+"."))),
 							UlFlags:	BIF_NEWDIALOGSTYLE | BIF_RETURNONLYFSDIRS,
 						})))
 						if pathGet != 0 {
@@ -274,7 +273,6 @@ func main() {
 	Init_aliases()
 
 	// Set up variables for kanziSFX
-
 	outNamePtr := new(string)
 	ctx := make(map[string]any)
 
@@ -285,7 +283,10 @@ func main() {
 	if err != nil {errExit(err, 1)}
 
 	// Check if Kanzi bit stream contains tar or not
-	if ctx["tar"].(bool) {tar = true}
+	if ctx["tar"].(bool) {
+		tar = true
+		instructions = "Specify the directory to extract to"
+	} else {instructions = "Specify the file to extract to"}
 
 	// Check if output size is present to use with progress tracking
 	if value, hasKey := ctx["outputSize"]; hasKey {progress[1] = value.(int64)}
@@ -300,7 +301,6 @@ func main() {
 	defaultPath = strings.TrimSuffix(filepath.Base(defaultPath), filepath.Ext(defaultPath))
 
 	// Get screen dimensions
-
 	screenWidth := GetSystemMetrics(SM_CXSCREEN)
 	screenHeight := GetSystemMetrics(SM_CYSCREEN)
 

@@ -39,7 +39,7 @@ call :Build_App
 if %dev% == 1 exit /b
 
 set GOOS=linux
-set EXT=
+set EXT=.elf
 set INCLUDE=include_other.go
 call :Build_App
 
@@ -53,17 +53,18 @@ exit /b
 :Build_App
 
 set app=CLI
-set source=CLI
 set flags=-s -w
+set RELEASE=../Release
 call :Build
 
 if %dev% == 1 exit /b
-if not %GOOS% == windows exit /b
 
-cd ..\GUI
+if %GOOS% == darwin exit /b
+if %GOOS% == windows cd ..\GUI\windows
+if %GOOS% == linux cd ..\GUI\linux
 
 if exist go.mod (
-	choice /m "Rebuild GUI go.mod and go.sum?"
+	choice /m "Rebuild %GOOS% GUI go.mod and go.sum?"
 	if !errorlevel! == 1 (del go.mod go.sum)
 )
 
@@ -74,17 +75,18 @@ if not exist go.mod (
 )
 
 set app=GUI
-set source=GUI_Windows
-set flags=-s -w -H=windowsgui
+if %GOOS% == windows set flags=-s -w -H=windowsgui
+if %GOOS% == linux set flags=-s -w
 set INCLUDE=
+set RELEASE=../../Release
 call :Build
 
-cd ..\CLI
+cd ..\..\CLI
 
 exit /b
 
 :Build
 echo Building %mod%_%app%_%GOOS%_%GOARCH%%EXT%...
-go build -ldflags="%flags%" -o "../Release/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" %source%.go %INCLUDE%
-if %errorlevel% == 0 if not %GOOS% == darwin call upx --lzma "../Release/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" 1> nul
+go build -ldflags="%flags%" -o "%RELEASE%/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" %mod%.go %INCLUDE%
+if %errorlevel% == 0 if not %GOOS% == darwin call upx --lzma "%RELEASE%/%mod%_%app%_%GOOS%_%GOARCH%%EXT%" 1> nul
 exit /b

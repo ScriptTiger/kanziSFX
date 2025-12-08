@@ -103,8 +103,8 @@ func main() {
 		err = Extract(outNamePtr, accelerator, ctx, nil, ops)
 		if err != nil {displayError(err)}
 	} else {
+		running = true
 		go func() {
-			running = true
 			err = Extract(outNamePtr, accelerator, nil, progress, ops)
 			if err != nil {displayError(err)}
 			running = false
