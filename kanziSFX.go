@@ -195,12 +195,15 @@ func Extract(outNamePtr *string, accelerator int64, ctx map[string]any, progress
 	// Decompress Kanzi bit stream, and unarchive tar if applicable
 	if isTar {
 		tarReader := tar.NewReader(reader)
-		os.MkdirAll(*outNamePtr, 0755)
+		err = os.MkdirAll(*outNamePtr, 0755)
+		if err != nil {return err}
 		for {
 			tarHeader, err := tarReader.Next()
 			if err != nil {break}
 			name := filepath.Join(*outNamePtr, tarHeader.Name)
-			if tarHeader.Typeflag == tar.TypeDir {os.Mkdir(name, 0755)
+			if tarHeader.Typeflag == tar.TypeDir {
+				err = os.Mkdir(name, 0755)
+				if err != nil {return err}
 			} else {
 				if verbose {os.Stdout.WriteString("Extracting "+name+"...\n")}
 				outputTar, err := os.Create(name)
