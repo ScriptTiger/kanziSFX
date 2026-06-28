@@ -1,6 +1,6 @@
-github.com/ScriptTiger/cno v0.0.0-20251208040705-1cfdf4ebf0d1 h1:x95Depmq43hoaVqnNE8HKl55A+Wokq8vX8E5t+6cnas=
-github.com/ScriptTiger/cno v0.0.0-20251208040705-1cfdf4ebf0d1/go.mod h1:Sn30fn9sJoeTf8zogrkItogFPhLKBAr8mSVZBc/RvjY=
-github.com/ScriptTiger/kanziSFX v0.0.0-20251208111115-434f95a95ccb h1:i8+GsgdRYB0SFvhTc0P3CX15lTTy4Vm5rwbbyRxQLsw=
-github.com/ScriptTiger/kanziSFX v0.0.0-20251208111115-434f95a95ccb/go.mod h1:K384ImoA4qHwlgYSiWqPX1DT6P8M8VlLF4GksoGd44Q=
-github.com/flanglet/kanzi-go/v2 v2.4.0 h1:CFYcqeM5djhVXd1/Rn1VmwP4e7ovKgdJTh9V5lkm0FI=
-github.com/flanglet/kanzi-go/v2 v2.4.0/go.mod h1:11DfrNICimOP1RWO0SO/PkC3iAPIVXPYtJHf70+8fjQ=
+github.com/ScriptTiger/cno v0.0.0-20260628083411-f4e685567932 h1:XvDgdiAVVRPUHJInq+ek88aA/hZjM2rJsGjg17r3MPo=
+github.com/ScriptTiger/cno v0.0.0-20260628083411-f4e685567932/go.mod h1:VUZ3eejh8TTOtJW6yQmj1taK9wdcQC2d1sdfBGFGXto=
+github.com/ScriptTiger/kanziSFX v0.0.0-20260628092125-19aadb03ea24 h1:0NdDyqK37OHEyAaquXGC+qUuYHzRHsPPAXKbo0uX4CY=
+github.com/ScriptTiger/kanziSFX v0.0.0-20260628092125-19aadb03ea24/go.mod h1:WGtW7OOu4oR42HLgY1zILYjtI4Z8H/xV/+89uptT4XM=
+github.com/flanglet/kanzi-go/v2 v2.5.1 h1:RkZDODUfRWReysvUQD0vdJGQbpNtZPnlAZlW61yhMAI=
+github.com/flanglet/kanzi-go/v2 v2.5.1/go.mod h1:dONaJD4uGPR6MHaHsb8Eg5KBsHUQ2CR/Yxj3jZyIPYw=
